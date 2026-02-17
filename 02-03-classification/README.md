@@ -4,25 +4,6 @@
 
 ---
 
-## ساختار پوشه پروژه
-
-- `02_Classification_Breast_Cancer.ipynb`  
-  نوت‌بوک اصلی شامل تمام مراحل تحلیل، پیش‌پردازش و آموزش مدل‌ها.
-- `02_Classification_Breast_Cancer.html`  
-  خروجی رندر شده نوت‌بوک برای مشاهده بدون نیاز به اجرای کد.
-- `data/data.csv`  
-  نسخه ذخیره‌شده داده‌ها (هدف نهایی از دیتاست سرطان سینه اسکیکیت‌لرن).
-- پوشه `images/`  
-  شامل نمودارهایی که برای گزارش نهایی استخراج شده‌اند:
-  - `images/01.png` – نمودار توزیع کلاس‌ها  
-  - `images/02.png` – نمودارهای پراکندگی چند ویژگی مهم  
-  - `images/03.png` – هیستوگرام ویژگی‌های مهم  
-  - `images/04.png` – ماتریس همبستگی ویژگی‌های مهم  
-  - `images/05.png` – منحنی‌های یادگیری مدل‌ها بر حسب درصد داده آموزشی  
-  - `images/06.png` – ماتریس‌های آشفتگی (Confusion Matrix) برای هر مدل
-
----
-
 ## توصیف دیتاست
 
 - منبع داده: `load_breast_cancer` از کتابخانه `scikit-learn`  
@@ -56,6 +37,18 @@
 
 این نمودار نشان می‌دهد که داده‌ها کمی نامتوازن هستند اما عدم توازن شدید نیست و می‌توان از Accuracy به‌عنوان معیار اصلی استفاده کرد.
 
+```python
+print("توزیع کلاس‌ها:")
+print(df["data/data.csv"].value_counts(normalize=True))
+
+plt.figure(figsize=(8, 5))
+sns.countplot(x="data/data.csv", data=df)
+plt.title(persian_text("توزیع کلاس‌های هدف (0: malignant, 1: benign)"))
+plt.show()
+```
+
+در این کد ابتدا نسبت هر کلاس محاسبه و چاپ می‌شود، سپس با `countplot` نمودار فراوانی کلاس‌ها روی کل دیتاست ترسیم می‌شود.
+
 ### ۲. همبستگی ویژگی‌ها با برچسب هدف
 
 همبستگی پیرسون بین تمام ویژگی‌ها و متغیر هدف محاسبه شده است. ده ویژگی با بیشترین همبستگی مطلق با هدف عبارت‌اند از:
@@ -73,6 +66,18 @@
 
 این ویژگی‌ها اهمیت زیادی در جداسازی دو کلاس دارند و در ادامه برای ترسیم نمودارها و تفسیر مدل استفاده شده‌اند.
 
+```python
+correlations = df.corr()["data/data.csv"].sort_values(ascending=False)
+
+print("۱۰ ویژگی با بیشترین همبستگی مطلق با هدف:")
+print(correlations.abs().sort_values(ascending=False).head(11)[1:])
+```
+
+در اینجا:
+- ابتدا ماتریس همبستگی کامل محاسبه می‌شود.  
+- سپس ستون مربوط به هدف انتخاب می‌شود.  
+- با استفاده از `abs` و `sort_values` ویژگی‌هایی که همبستگی مطلق بیشتری دارند لیست می‌شوند.
+
 ### ۳. نمودارهای پراکندگی ویژگی‌های مهم
 
 برای سه ویژگی مهم:
@@ -89,6 +94,24 @@
 
 - نمونه‌های بدخیم و خوش‌خیم در فضای این ویژگی‌ها تا حد زیادی از هم جدا می‌شوند.
 - ویژگی‌های مرتبط با concavity و radius در جداسازی کلاس‌ها نقش پررنگی دارند.
+
+```python
+important_features = [
+    "worst concave points",
+    "mean concave points",
+    "worst radius",
+]
+
+sns.pairplot(
+    df,
+    vars=important_features,
+    hue="data/data.csv",
+    diag_kind="kde",
+)
+plt.show()
+```
+
+این نمودار نشان می‌دهد داده‌ها در فضای این سه ویژگی چقدر برای جداسازی کلاس‌ها مناسب هستند.
 
 ### ۴. توزیع ویژگی‌های مهم (هیستوگرام‌ها)
 
@@ -111,6 +134,29 @@
 
 - بسیاری از ویژگی‌های `mean` و `worst` با هم همبستگی بالایی دارند (رد پای افزونگی ویژگی‌ها).  
 - این موضوع نشان می‌دهد که امکان کاهش ابعاد (مثلاً با PCA یا انتخاب ویژگی) در آینده وجود دارد، بدون اینکه دقت مدل به‌شدت افت کند.
+
+بخشی از کد مربوط به این دو نمودار:
+
+```python
+df[important_features].hist(bins=30, figsize=(12, 8))
+plt.suptitle(persian_text("توزیع ویژگی‌های مهم"))
+plt.show()
+
+high_corr_features = correlations.abs().sort_values(ascending=False).head(15).index
+
+plt.figure(figsize=(12, 10))
+sns.heatmap(
+    df[high_corr_features].corr(),
+    annot=True,
+    cmap="coolwarm",
+    fmt=".2f",
+)
+plt.title(persian_text("ماتریس همبستگی ویژگی‌های مهم"))
+plt.show()
+```
+
+در بخش اول، برای هر ویژگی مهم یک هیستوگرام جداگانه رسم می‌شود.  
+در بخش دوم، با استفاده از `heatmap` همبستگی بین مهم‌ترین ویژگی‌ها به صورت تصویری نمایش داده شده است.
 
 ---
 
@@ -151,6 +197,32 @@
 - اندازه داده آموزشی: 455 نمونه  
 - اندازه داده تست: 114 نمونه
 
+```python
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+X = df.drop("data/data.csv", axis=1)
+y = df["data/data.csv"]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y,
+)
+
+print(f"اندازه train: {X_train.shape[0]}, test: {X_test.shape[0]}")
+```
+
+در این مرحله:
+- ابتدا ویژگی‌ها و برچسب جدا می‌شوند.  
+- سپس با `StandardScaler` همه ویژگی‌ها نرمال می‌شوند.  
+- در نهایت، داده‌ها به دو مجموعه آموزشی و تست با حفظ نسبت کلاس‌ها تقسیم می‌شوند.
+
 ---
 
 ## تعریف تابع ارزیابی بر حسب اندازه داده آموزشی
@@ -166,6 +238,37 @@
   - `classification_report` شامل precision، recall و f1-score برای هر کلاس
 
 این طراحی باعث شده علاوه بر مقایسه نهایی مدل‌ها، روند یادگیری هر مدل نسبت به حجم داده نیز دیده شود.
+
+```python
+from sklearn.metrics import accuracy_score, classification_report
+
+def evaluate_with_different_sizes(model, name):
+    train_sizes = np.linspace(0.1, 1.0, 10)
+    accuracies = []
+
+    for size in train_sizes:
+        n_samples = int(size * len(X_train))
+        X_sub = X_train[:n_samples]
+        y_sub = y_train[:n_samples]
+
+        model.fit(X_sub, y_sub)
+        y_pred = model.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
+        accuracies.append(acc)
+
+    plt.plot(train_sizes, accuracies, marker="o", label=name)
+
+    model.fit(X_train, y_train)
+    y_pred_final = model.predict(X_test)
+
+    print(f"\nنتایج نهایی {name} (روی کل داده آموزشی):")
+    print(f"Accuracy: {accuracy_score(y_test, y_pred_final):.4f}")
+    print(classification_report(y_test, y_pred_final, target_names=data.target_names))
+
+    return model
+```
+
+این تابع هم برای رسم منحنی یادگیری استفاده می‌شود و هم گزارش نهایی هر مدل را چاپ می‌کند.
 
 ---
 
@@ -191,6 +294,53 @@
    - بهترین مقدار انتخاب‌شده: **k = 7**.
 
 تمام مدل‌ها روی داده‌های مقیاس‌بندی‌شده آموزش داده شده‌اند.
+
+بخشی از کد تعریف و آموزش این مدل‌ها:
+
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
+
+plt.figure(figsize=(12, 8))
+plt.title(persian_text("منحنی یادگیری (Accuracy بر حسب درصد داده آموزشی)"))
+plt.xlabel(persian_text("درصد داده آموزشی"))
+plt.ylabel(persian_text("Accuracy روی تست"))
+
+log_reg = LogisticRegression(max_iter=10000)
+evaluate_with_different_sizes(log_reg, "Logistic Regression")
+
+linear_svm = SVC(kernel="linear")
+evaluate_with_different_sizes(linear_svm, "Linear SVM")
+
+rbf_svm = SVC(kernel="rbf", gamma="scale")
+evaluate_with_different_sizes(rbf_svm, "RBF SVM")
+
+param_grid = {"n_neighbors": range(3, 20)}
+knn_grid = GridSearchCV(
+    KNeighborsClassifier(),
+    param_grid,
+    cv=5,
+    scoring="accuracy",
+)
+knn_grid.fit(X_train, y_train)
+best_knn = knn_grid.best_estimator_
+
+print(f"بهترین k: {knn_grid.best_params_['n_neighbors']}")
+evaluate_with_different_sizes(
+    best_knn,
+    f"kNN (k={knn_grid.best_params_['n_neighbors']})",
+)
+
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+در این کد:
+- سه مدل Logistic Regression، SVM خطی و SVM با کرنل RBF مستقیماً ساخته و ارزیابی می‌شوند.  
+- برای kNN ابتدا با Grid Search بهترین `k` پیدا می‌شود، سپس همان مدل ارزیابی می‌شود.
 
 ---
 
@@ -239,22 +389,37 @@
 - مدل‌ها در تشخیص هر دو کلاس موفق عمل کرده‌اند، اما خطاهای اندکی در تشخیص تومورهای بدخیم و خوش‌خیم مشاهده می‌شود.  
 - این تحلیل تأیید می‌کند که مدل‌ها نه‌تنها از نظر Accuracy، بلکه از نظر توازن بین precision و recall نیز مناسب‌اند.
 
+```python
+from sklearn.metrics import ConfusionMatrixDisplay
+
+models = {
+    "Logistic Regression": log_reg,
+    "Linear SVM": linear_svm,
+    "RBF SVM": rbf_svm,
+    "kNN": best_knn,
+}
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.ravel()
+
+for idx, (name, model) in enumerate(models.items()):
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    ConfusionMatrixDisplay.from_predictions(
+        y_test,
+        y_pred,
+        display_labels=data.target_names,
+        ax=axes[idx],
+    )
+    axes[idx].set_title(name)
+
+plt.tight_layout()
+plt.show()
+```
+
+در هر زیرنمودار، ماتریس آشفتگی مربوط به یک مدل نمایش داده می‌شود تا بتوان خطاهای نوع اول و دوم را برای هر مدل با هم مقایسه کرد.
+
 ---
 
-## نحوه اجرای کد
-
-برای اجرای نوت‌بوک روی سیستم خود، مراحل زیر را می‌توانید انجام دهید:
-
-1. ایجاد محیط پایتون (مثلاً با Anaconda یا venv).  
-2. نصب کتابخانه‌های مورد نیاز (نسخه‌های مشابه محیط فعلی):
-   - `pandas`  
-   - `numpy`  
-   - `matplotlib`  
-   - `seaborn`  
-   - `scikit-learn`  
-   - `arabic_reshaper`  
-   - `python-bidi`  
-3. باز کردن فایل نوت‌بوک در Jupyter Notebook یا JupyterLab:  
-   - `02_Classification_Breast_Cancer.ipynb`  
-4. اجرای سلول‌ها از ابتدا تا انتها برای بازتولید تمام نتایج و نمودارها.
-
+---
